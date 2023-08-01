@@ -38,10 +38,10 @@ func (c *Client) GetHealth() (h structs.Health, err error) {
 	return
 }
 
-// GetBalance retrieves the balance of in-game currencies for the pirate
-func (c *Client) GetBalance() (b structs.Balance, err error) {
-	c.logger.Info("getting pirate balance")
-	err = c.apiGet("/profilev2/balance", &b)
+// GetProfile retrieves the balance of in-game currencies plus title and profile image for the pirate
+func (c *Client) GetProfile() (p structs.Profile, err error) {
+	c.logger.Info("getting pirate profile")
+	err = c.apiGet("/profilev2/balance", &p)
 	return
 }
 
