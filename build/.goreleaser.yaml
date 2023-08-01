@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod verify
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "7"
+    ldflags:
+      - -s # -s and -w reduce binary size, but prevent debugging (not necessary for production build)
+      - -w
+
+changelog:
+  sort: asc
+  abbrev: -1
+  use: github
+  filters:
+    exclude:
+      - "^style"
+      - "^test"
+      - "^chore"
+      - "^build\\(dev\\)"
+      - "^Merge"
+
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Documentation
+      regexp: "^docs"
+      order: 4
+    - title: Refactor
+      regexp: "^refactor"
+      order: 3
+    - title: Performance
+      regexp: "^perf"
+      order: 2
+    - title: Dependencies
+      regexp: "^build\\(deps\\)"
+      order: 7
+    - title: Build
+      regexp: "^build"
+      order: 5
+    - title: Pipeline
+      regexp: "^ci"
+      order: 6
+    - title: Others
+      order: 999
+
+archives:
+  - rlcp: true
+    format: zip
+    strip_parent_binary_folder: true
+
+release:
+  target_commitish: "{{ .Commit }}"
+  github:
+    owner: stnokott
+    name: "{{ .ProjectName }}"
+  name_template: "v{{ .Version }}"

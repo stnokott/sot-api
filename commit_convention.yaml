@@ -1,0 +1,13 @@
+# not present: commit_types: using the default angular-style commit types
+# config for github.com/skalt/git-cc
+# installation: go install github.com/skalt/git-cc@latest
+#
+# they would look like this though:
+# commit_types:
+#  - type: description of what the short-form "type" means
+scopes:
+  # Array<{[key: string]: string}> defines both the order of scopes (nice for
+  # keeping the most frequently used scopes/types on top, and requires
+  # explanation of each commit_type/scope.
+  - dev: development dependencies
+  - build: build tools or chains
