@@ -54,7 +54,6 @@ func (c *Client) get(url string, output any) (err error) {
 		if errInner := res.Body.Close(); errInner != nil && err == nil {
 			err = errInner
 		}
-		return
 	}()
 
 	c.logger.Debug("decoding response")
