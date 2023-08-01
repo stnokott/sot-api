@@ -2,7 +2,7 @@ package io
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -17,7 +17,7 @@ func ReadToken() (string, error) {
 		return "", err
 	}
 	tokenFilePath := filepath.Join(rootFolder, tokenFilename)
-	tokenBytes, err := ioutil.ReadFile(tokenFilePath)
+	tokenBytes, err := os.ReadFile(tokenFilePath)
 	if err != nil {
 		return "", fmt.Errorf("could not read token file: %w", err)
 	}
