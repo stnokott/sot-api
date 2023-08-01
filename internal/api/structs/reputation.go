@@ -181,14 +181,14 @@ func (r repFlameheart) String() string {
 type repEmblems []repEmblem
 
 // UnmarshalJSON unwraps the inner emblem list to avoid redundant nesting
-func (l repEmblems) UnmarshalJSON(data []byte) (err error) {
+func (l *repEmblems) UnmarshalJSON(data []byte) (err error) {
 	auxInnerData := struct {
 		Emblems []repEmblem
 	}{}
 	if err = json.Unmarshal(data, &auxInnerData); err != nil {
 		return
 	}
-	l = (repEmblems)(auxInnerData.Emblems)
+	*l = (repEmblems)(auxInnerData.Emblems)
 	return
 }
 
