@@ -10,15 +10,18 @@ import (
 
 var client = &http.Client{Timeout: 5 * time.Second}
 
-// RequestError is returned as error when a non-200 HTTP response is received
-type RequestError struct {
+// ErrHTTP occurs when a non-200 HTTP response is received
+type ErrHTTP struct {
 	StatusCode int
 	Err        error
 }
 
-func (r RequestError) Error() string {
+func (r ErrHTTP) Error() string {
 	return fmt.Sprintf("status %d: err %v", r.StatusCode, r.Err)
 }
+
+// ErrResponseDecode occurs when a valid response is received, but it could not be decoded
+type ErrResponseDecode error
 
 func (c *Client) get(url string, output any) (err error) {
 	var req *http.Request
@@ -44,7 +47,7 @@ func (c *Client) get(url string, output any) (err error) {
 		return
 	}
 	if res.StatusCode != 200 {
-		err = RequestError{
+		err = ErrHTTP{
 			StatusCode: res.StatusCode,
 			Err:        errors.New("got non-ok status code from API"),
 		}
@@ -57,7 +60,9 @@ func (c *Client) get(url string, output any) (err error) {
 	}()
 
 	c.logger.Debug("decoding response")
-	err = json.NewDecoder(res.Body).Decode(output)
+	if err = json.NewDecoder(res.Body).Decode(output); err != nil {
+		err = err.(ErrResponseDecode)
+	}
 	return
 }
 

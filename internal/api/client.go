@@ -2,7 +2,7 @@
 package api
 
 import (
-	"golang.org/x/exp/slog"
+	"go.uber.org/zap"
 	"golang.org/x/text/language"
 
 	"github.com/stnokott/sot-api/internal/api/structs"
@@ -14,11 +14,11 @@ type Client struct {
 	baseURL     string
 	httpReferer string
 
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
 // NewClient creates a new API client with the specified token
-func NewClient(ratToken string, locale language.Tag, logger *slog.Logger) *Client {
+func NewClient(ratToken string, locale language.Tag, logger *zap.Logger) *Client {
 	var localeURLPart string
 	if locale != language.English {
 		localeURLPart = locale.String() + "/"
@@ -32,29 +32,32 @@ func NewClient(ratToken string, locale language.Tag, logger *slog.Logger) *Clien
 }
 
 // GetHealth retrieves data about the status of the API
-func (c *Client) GetHealth() (h structs.Health, err error) {
+func (c *Client) GetHealth() (h *structs.Health, err error) {
 	c.logger.Info("getting API health")
 	err = c.get("https://status.seaofthieves.com/api/health", &h)
 	return
 }
 
 // GetProfile retrieves the balance of in-game currencies plus title and profile image for the pirate
-func (c *Client) GetProfile() (p structs.Profile, err error) {
+func (c *Client) GetProfile() (p *structs.Profile, err error) {
 	c.logger.Info("getting pirate profile")
-	err = c.apiGet("/profilev2/balance", &p)
+	p = new(structs.Profile)
+	err = c.apiGet("/profilev2/balance", p)
 	return
 }
 
 // GetReputation retrieves the reputation for all available campaigns
-func (c *Client) GetReputation() (r structs.Reputation, err error) {
+func (c *Client) GetReputation() (r *structs.Reputation, err error) {
 	c.logger.Info("getting pirate reputation")
-	err = c.apiGet("/profilev2/reputation", &r)
+	r = new(structs.Reputation)
+	err = c.apiGet("/profilev2/reputation", r)
 	return
 }
 
 // GetSeason retrieves data about the current active season
-func (c *Client) GetSeason() (s structs.Season, err error) {
+func (c *Client) GetSeason() (s *structs.Season, err error) {
 	c.logger.Info("getting pirate season progress")
-	err = c.apiGet("/profilev2/seasons-progress", &s)
+	s = new(structs.Season)
+	err = c.apiGet("/profilev2/seasons-progress", s)
 	return
 }
