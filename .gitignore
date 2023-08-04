@@ -2,6 +2,9 @@ rat.txt
 
 dist/**
 
+# SonarScanner
+.scannerwork
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
