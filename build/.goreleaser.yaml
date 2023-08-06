@@ -4,23 +4,26 @@ before:
   hooks:
     - go mod tidy
     - go mod verify
+    - go install golang.org/x/tools/cmd/stringer@latest
     - go install fyne.io/fyne/v2/cmd/fyne@latest
     - go generate ./...
 builds:
   - env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - windows
-      - linux
     goarch:
       - amd64
-      - arm
-      - arm64
-    goarm:
-      - "7"
     ldflags:
       - -s # -s and -w reduce binary size, but prevent debugging (not necessary for production build)
       - -w
+      - -H=windowsgui
+
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
+    brute: true
 
 changelog:
   sort: asc
