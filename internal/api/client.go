@@ -40,23 +40,26 @@ func (c *Client) GetHealth() (h *structs.Health, err error) {
 
 // GetProfile retrieves the balance of in-game currencies plus title and profile image for the pirate
 func (c *Client) GetProfile() (p *structs.Profile, err error) {
-	c.logger.Info("getting pirate profile")
+	c.logger.Info("getting profile")
 	p = new(structs.Profile)
 	err = c.apiGet("/profilev2/balance", p)
 	return
 }
 
 // GetReputation retrieves the reputation for all available campaigns
-func (c *Client) GetReputation() (r *structs.Reputation, err error) {
-	c.logger.Info("getting pirate reputation")
-	r = new(structs.Reputation)
-	err = c.apiGet("/profilev2/reputation", r)
+func (c *Client) GetReputation() (r structs.Reputations, err error) {
+	c.logger.Info("getting reputation")
+	resp := new(structs.Reputations)
+	err = c.apiGet("/profilev2/reputation", resp)
+	if *resp != nil {
+		r = *resp
+	}
 	return
 }
 
 // GetSeason retrieves data about the current active season
 func (c *Client) GetSeason() (s *structs.Season, err error) {
-	c.logger.Info("getting pirate season progress")
+	c.logger.Info("getting season progress")
 	s = new(structs.Season)
 	err = c.apiGet("/profilev2/seasons-progress", s)
 	return

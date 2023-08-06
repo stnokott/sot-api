@@ -29,6 +29,7 @@ type App struct {
 
 	profileToolbar *profileToolbar
 	statusBar      *statusBar
+	reputationView *reputationView
 	errorOverlay   *errorOverlay
 
 	logger *zap.Logger
@@ -46,11 +47,12 @@ func NewApp(c *api.Client, logger *zap.Logger) *App {
 
 	profile := newProfileToolbar()
 	statusBar := newStatusBar()
+	reputationView := newReputationView()
 	errorOverlay := newErrorOverlay(refreshInterval)
 	errorOverlay.Hide()
 
 	tabs := container.NewAppTabs(
-		container.NewTabItem("Tab 1", widget.NewLabel("Hello")),
+		container.NewTabItem("Reputation", reputationView),
 		container.NewTabItem("Tab 2", widget.NewLabel("World!")),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
@@ -74,6 +76,7 @@ func NewApp(c *api.Client, logger *zap.Logger) *App {
 
 		profileToolbar: profile,
 		statusBar:      statusBar,
+		reputationView: reputationView,
 		errorOverlay:   errorOverlay,
 
 		logger: logger,
@@ -113,6 +116,7 @@ func (a *App) refreshTask() {
 			a.errorOverlay.setErr(result.Err)
 			if result.Err == nil {
 				a.profileToolbar.SetProfile(result.Profile)
+				a.reputationView.SetReputation(result.Reputations)
 			}
 			if onDone != nil {
 				onDone()

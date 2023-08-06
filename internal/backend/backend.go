@@ -3,6 +3,7 @@ package backend
 
 import (
 	"errors"
+	"reflect"
 	"time"
 
 	"github.com/stnokott/sot-api/internal/api"
@@ -31,7 +32,8 @@ func NewScheduler(client *api.Client, refreshInterval time.Duration, logger *zap
 // JobResult contains the result of a scheduled job.
 // If Err is not nil, all other fields will be nil
 type JobResult struct {
-	Profile *structs.Profile
+	Profile     *structs.Profile
+	Reputations structs.Reputations
 
 	Err error
 }
@@ -72,12 +74,13 @@ func (s *Scheduler) Run() (start <-chan struct{}, end <-chan JobResult) {
 }
 
 func (s *Scheduler) doTask() (r JobResult) {
+	var err error
 	defer func() {
+		r.Err = convertAPIErr(err)
 		if r.Err != nil {
-			s.logger.Debug("got error, checking API health")
+			s.logger.Debug("got " + reflect.TypeOf(r.Err).String() + " error, checking API health")
 			if health, err := s.client.GetHealth(); err != nil {
 				s.logger.Debug("could not retrieve API health, falling back to original error")
-				// error getting health
 				r.Err = errors.Join(r.Err, err)
 			} else if health.HasFailures {
 				s.logger.Debug("API is unhealthy, overwriting error")
@@ -86,13 +89,12 @@ func (s *Scheduler) doTask() (r JobResult) {
 		}
 	}()
 
-	var err error
 	s.logger.Debug("getting profile")
 	r.Profile, err = s.client.GetProfile()
 	if err != nil {
-		r.Err = convertAPIErr(err)
 		return
 	}
+	r.Reputations, err = s.client.GetReputation()
 
 	return
 }
