@@ -11,19 +11,51 @@ type Reputation struct {
 	Motto    string
 	RankName *string `json:"Rank"`
 
-	Level              *int
-	Progress           *float64
-	EmblemsTotal       *int
-	EmblemsUnlocked    *int
-	TitlesTotal        *int
-	TitlesUnlocked     *int
-	ItemsTotal         *int
-	ItemsUnlocked      *int
-	PromotionsTotal    *int
-	PromotionsUnlocked *int
+	Level    *int
+	Progress *float64
+
+	UnlockSummaries map[string]unlockSummary `json:"-"`
 
 	Campaigns map[string]repCampaign
 	Emblems   repEmblems
+
+	unlocks json.RawMessage
+}
+
+func (r *Reputation) UnmarshalJSON(data []byte) (err error) {
+	if err = json.Unmarshal(data, r); err != nil {
+		return
+	}
+
+	aux := struct {
+		ItemsTotal         int
+		ItemsUnlocked      int
+		EmblemsTotal       int
+		EmblemsUnlocked    int
+		TitlesTotal        *int
+		TitlesUnlocked     *int
+		PromotionsTotal    *int
+		PromotionsUnlocked *int
+	}{}
+	if err = json.Unmarshal(r.unlocks, &aux); err != nil {
+		return
+	}
+	// Items & Emblems are always present
+	r.UnlockSummaries["Items"] = unlockSummary{Total: aux.ItemsTotal, Unlocked: aux.ItemsUnlocked}
+	r.UnlockSummaries["Emblems"] = unlockSummary{Total: aux.EmblemsTotal, Unlocked: aux.EmblemsUnlocked}
+	// Others optional
+	if aux.TitlesTotal != nil {
+		r.UnlockSummaries["Titles"] = unlockSummary{Total: *aux.TitlesTotal, Unlocked: *aux.TitlesUnlocked}
+	}
+	if aux.PromotionsTotal != nil {
+		r.UnlockSummaries["Promotions"] = unlockSummary{Total: *aux.PromotionsTotal, Unlocked: *aux.PromotionsUnlocked}
+	}
+	return
+}
+
+type unlockSummary struct {
+	Total    int
+	Unlocked int
 }
 
 type repEmblems []repEmblem

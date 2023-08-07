@@ -8,7 +8,15 @@ import (
 	"time"
 )
 
-var client = &http.Client{Timeout: 5 * time.Second}
+var client = &http.Client{
+	Timeout: 5 * time.Second,
+	CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+		if req.URL.Path == "/logout" {
+			return errors.New("redirected to logout page, please update your RAT token")
+		}
+		return fmt.Errorf("encountered disallowed redirect to %s", req.URL.String())
+	},
+}
 
 // ErrHTTP occurs when a non-200 HTTP response is received
 type ErrHTTP struct {

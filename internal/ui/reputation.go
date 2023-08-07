@@ -66,43 +66,28 @@ func newReputationView() *reputationView {
 }
 
 func (r *reputationView) SetReputation(data structs.Reputations) {
-	// TODO: remove reputation types not present in data
 	r.reputationCategoriesGrid.RemoveAll()
 	for repName, repVal := range data {
 		categoryView, ok := r.reputationCategoryViews[repName]
 		if !ok {
 			categoryView = newReputationCategoryView(repName, repTypeColors[repName])
 		}
-		if repVal.EmblemsTotal != nil {
+		for repSumName, repSumVal := range repVal.UnlockSummaries {
 			categoryView.AddReputationSummary(reputationProgressSummary{
-				Name:     "Emblems",
-				Total:    *repVal.EmblemsTotal,
-				Unlocked: *repVal.EmblemsUnlocked,
-			})
-		}
-		if repVal.ItemsTotal != nil {
-			categoryView.AddReputationSummary(reputationProgressSummary{
-				Name:     "Items",
-				Total:    *repVal.ItemsTotal,
-				Unlocked: *repVal.ItemsUnlocked,
-			})
-		}
-		if repVal.TitlesTotal != nil {
-			categoryView.AddReputationSummary(reputationProgressSummary{
-				Name:     "Titles",
-				Total:    *repVal.TitlesTotal,
-				Unlocked: *repVal.TitlesUnlocked,
-			})
-		}
-		if repVal.PromotionsTotal != nil {
-			categoryView.AddReputationSummary(reputationProgressSummary{
-				Name:     "Promotions",
-				Total:    *repVal.PromotionsTotal,
-				Unlocked: *repVal.PromotionsUnlocked,
+				Name:     repSumName,
+				Total:    repSumVal.Total,
+				Unlocked: repSumVal.Unlocked,
 			})
 		}
 		// TODO: split in separate function
 		r.reputationCategoriesGrid.Add(categoryView)
+	}
+
+	// remove reputation types not present in data
+	for name := range r.reputationCategoryViews {
+		if _, ok := data[name]; !ok {
+			delete(r.reputationCategoryViews, name)
+		}
 	}
 }
 
