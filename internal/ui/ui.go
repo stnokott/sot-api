@@ -142,7 +142,7 @@ func (a *App) refreshTask() {
 
 func (a *App) requestNewToken(chReset chan<- backend.SchedulerReset) {
 	popup := widget.NewModalPopUp(
-		widget.NewLabel("Please login..."),
+		widget.NewLabel("Opening browser for login..."),
 		a.rootWindow.Canvas(),
 	)
 	popup.Show()
