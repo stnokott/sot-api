@@ -38,7 +38,10 @@ func GetAuthFromBrowser() <-chan AuthResp {
 	chCookie := make(chan AuthResp)
 
 	go func() {
-		taskCtx, cancel := chromedp.NewExecAllocator(context.Background(), chromedpOpts...)
+		allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), chromedpOpts...)
+		defer cancel()
+
+		taskCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
 		defer cancel()
 
 		fnCheckLocation := func(ctx context.Context) error {
