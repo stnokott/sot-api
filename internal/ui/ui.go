@@ -12,6 +12,7 @@ import (
 	"github.com/stnokott/sot-api/internal/api"
 	"github.com/stnokott/sot-api/internal/backend"
 	"github.com/stnokott/sot-api/internal/files"
+	"github.com/stnokott/sot-api/internal/log"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 )
@@ -75,8 +76,8 @@ func NewApp(logger *zap.Logger) *App {
 	if err != nil {
 		errorOverlay.setErr(backend.ErrUnauthorized{Err: err})
 	}
-	client := api.NewClient(token, language.German, logger.With(zap.String("module", "client")))
-	scheduler := backend.NewScheduler(client, refreshInterval, logger.With(zap.String("module", "scheduler")))
+	client := api.NewClient(token, language.German, log.ForModule("client"))
+	scheduler := backend.NewScheduler(client, refreshInterval, log.ForModule("scheduler"))
 
 	return &App{
 		scheduler: scheduler,
