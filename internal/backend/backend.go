@@ -29,6 +29,53 @@ func NewScheduler(client *api.Client, refreshInterval time.Duration, logger *zap
 	}
 }
 
+// ErrAPIUnhealthy occurs when the API is unhealthy
+type ErrAPIUnhealthy struct{}
+
+func (e ErrAPIUnhealthy) Error() string {
+	return "API is unhealthy"
+}
+
+// ErrUnauthorized occurs when authorization using the provided RAT token did not succeed
+type ErrUnauthorized struct {
+	Err error
+}
+
+func (e ErrUnauthorized) Error() string {
+	return "RAT token is expired or invalid"
+}
+
+func (e ErrUnauthorized) Unwrap() error {
+	return e.Err
+}
+
+// ErrAPI occurs when there is an error querying the API
+type ErrAPI struct {
+	APIErr error
+}
+
+func (e ErrAPI) Error() string {
+	return "there was an error querying the API: " + e.APIErr.Error()
+}
+
+func (e ErrAPI) Unwrap() error {
+	return e.APIErr
+}
+
+// ErrAPIRespDecode occurs when an API response is received, but it could not
+// be decoded.
+type ErrAPIRespDecode struct {
+	DecodeErr error
+}
+
+func (e ErrAPIRespDecode) Error() string {
+	return "there was an error decoding the API response: " + e.DecodeErr.Error()
+}
+
+func (e ErrAPIRespDecode) Unwrap() error {
+	return e.DecodeErr
+}
+
 // JobResult contains the result of a scheduled job.
 // If Err is not nil, all other fields will be nil
 type JobResult struct {
@@ -38,34 +85,42 @@ type JobResult struct {
 	Err error
 }
 
-// ErrAPIUnhealthy occurs when the API is unhealthy
-type ErrAPIUnhealthy error
-
-// ErrAPI occurs when there is an error querying the API
-type ErrAPI error
-
-// ErrAPIRespDecode occurs when an API response is received, but it could not
-// be decoded.
-type ErrAPIRespDecode error
+// SchedulerReset can be sent to a running scheduler via channel to update the RAT token while running
+type SchedulerReset struct {
+	Token string
+}
 
 // Run starts the scheduler and returns one channel for beginning a task and one for finishing it.
 // It will run forever, channels will never be closed.
-func (s *Scheduler) Run() (start <-chan struct{}, end <-chan JobResult) {
+func (s *Scheduler) Run() (start <-chan struct{}, end <-chan JobResult, reset chan<- SchedulerReset) {
 	chStart := make(chan struct{})
 	chEnd := make(chan JobResult)
-	start, end = chStart, chEnd
+	chReset := make(chan SchedulerReset)
+	start, end, reset = chStart, chEnd, chReset
+
+	doTask := func() {
+		s.logger.Debug("running task")
+		chStart <- struct{}{}
+		chEnd <- s.getAPIData()
+		s.logger.Debug("finished task")
+	}
 
 	go func() {
-		s.logger.Debug("running initial update task")
-		chStart <- struct{}{}
-		chEnd <- s.doTask()
-		s.logger.Debug("finished initial task")
-		// goroutine will never end, so no need to use NewTicker (ok to "leak")
-		for range time.Tick(s.refreshInterval) {
-			s.logger.Debug("starting update task")
-			chStart <- struct{}{}
-			chEnd <- s.doTask()
-			s.logger.Debug("finished update task")
+		doTask() // initial run
+		ticker := time.NewTicker(s.refreshInterval)
+		for {
+			select {
+			case <-ticker.C:
+				doTask()
+			case reset := <-chReset:
+				s.logger.Debug("reset requested")
+				if reset.Token != "" {
+					s.client.SetToken(reset.Token)
+					s.logger.Debug("token updated")
+				}
+				doTask()
+				ticker.Reset(s.refreshInterval)
+			}
 		}
 	}()
 
@@ -73,7 +128,7 @@ func (s *Scheduler) Run() (start <-chan struct{}, end <-chan JobResult) {
 	return
 }
 
-func (s *Scheduler) doTask() (r JobResult) {
+func (s *Scheduler) getAPIData() (r JobResult) {
 	var err error
 	defer func() {
 		r.Err = convertAPIErr(err)
@@ -81,7 +136,6 @@ func (s *Scheduler) doTask() (r JobResult) {
 			s.logger.Debug("got " + reflect.TypeOf(r.Err).String() + " error, checking API health")
 			if health, err := s.client.GetHealth(); err != nil {
 				s.logger.Debug("could not retrieve API health, falling back to original error")
-				r.Err = errors.Join(r.Err, err)
 			} else if health.HasFailures {
 				s.logger.Debug("API is unhealthy, overwriting error")
 				r.Err = errors.New(health.String()).(ErrAPIUnhealthy)
@@ -104,11 +158,13 @@ func convertAPIErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	switch err.(type) {
+	switch err := err.(type) {
 	case api.ErrHTTP:
-		return err.(ErrAPI)
+		return ErrAPI{APIErr: errors.Unwrap(err)}
+	case api.ErrUnauthorized:
+		return ErrUnauthorized{Err: errors.Unwrap(err)}
 	case api.ErrResponseDecode:
-		return err.(ErrAPIRespDecode)
+		return ErrAPIRespDecode{DecodeErr: errors.Unwrap(err)}
 	default:
 		return err
 	}

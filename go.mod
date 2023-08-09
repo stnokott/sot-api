@@ -1,13 +1,23 @@
 module github.com/stnokott/sot-api
 
-go 1.20
+go 1.21
 
 require (
+	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89
+	github.com/chromedp/chromedp v0.9.2
 	go.uber.org/zap v1.25.0
 	golang.org/x/text v0.11.0
 )
 
-require go.uber.org/multierr v1.11.0 // indirect
+require (
+	github.com/chromedp/sysutil v1.0.0 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.2.1 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+)
 
 require (
 	fyne.io/fyne/v2 v2.3.5

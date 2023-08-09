@@ -72,7 +72,7 @@ func (r *reputationView) SetReputation(data structs.Reputations) {
 		if !ok {
 			categoryView = newReputationCategoryView(repName, repTypeColors[repName])
 		}
-		for repSumName, repSumVal := range repVal.UnlockSummaries {
+		for repSumName, repSumVal := range repVal.UnlockSummaries() {
 			categoryView.AddReputationSummary(reputationProgressSummary{
 				Name:     repSumName,
 				Total:    repSumVal.Total,

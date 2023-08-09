@@ -1,5 +1,5 @@
-// Package io provides utility function relating to file I/O
-package io
+// Package files provides utility function relating to file I/O
+package files
 
 import (
 	"errors"

@@ -6,6 +6,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/stnokott/sot-api/internal/api/structs"
+	"github.com/stnokott/sot-api/internal/files"
 )
 
 // Client allows querying SoT API endpoints
@@ -18,16 +19,26 @@ type Client struct {
 }
 
 // NewClient creates a new API client with the specified token
-func NewClient(ratToken string, locale language.Tag, logger *zap.Logger) *Client {
+func NewClient(token string, locale language.Tag, logger *zap.Logger) *Client {
 	var localeURLPart string
 	if locale != language.English {
+		// URL for English does not contain a locale string, all others do
 		localeURLPart = locale.String() + "/"
 	}
+
 	return &Client{
-		token:       ratToken,
+		token:       token,
 		baseURL:     "https://www.seaofthieves.com/" + localeURLPart + "api",
 		httpReferer: "https://www.seaofthieves.com/" + localeURLPart + "profile",
 		logger:      logger,
+	}
+}
+
+// SetToken updates the RAT token and writes it to file
+func (c *Client) SetToken(t string) {
+	c.token = t
+	if err := files.WriteToken(t); err != nil {
+		c.logger.Fatal("could not write token: " + err.Error())
 	}
 }
 
@@ -49,11 +60,7 @@ func (c *Client) GetProfile() (p *structs.Profile, err error) {
 // GetReputation retrieves the reputation for all available campaigns
 func (c *Client) GetReputation() (r structs.Reputations, err error) {
 	c.logger.Info("getting reputation")
-	resp := new(structs.Reputations)
-	err = c.apiGet("/profilev2/reputation", resp)
-	if *resp != nil {
-		r = *resp
-	}
+	err = c.apiGet("/profilev2/reputation", &r)
 	return
 }
 

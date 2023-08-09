@@ -7,6 +7,7 @@ import (
 // Reputations contains the reputation for all available campaigns
 type Reputations map[string]Reputation
 
+// Reputation describes the reputation progress for a specific campaign
 type Reputation struct {
 	Motto    string
 	RankName *string `json:"Rank"`
@@ -14,48 +15,45 @@ type Reputation struct {
 	Level    *int
 	Progress *float64
 
-	UnlockSummaries map[string]unlockSummary `json:"-"`
+	ItemsTotal         int
+	ItemsUnlocked      int
+	EmblemsTotal       int
+	EmblemsUnlocked    int
+	TitlesTotal        *int
+	TitlesUnlocked     *int
+	PromotionsTotal    *int
+	PromotionsUnlocked *int
 
 	Campaigns map[string]repCampaign
 	Emblems   repEmblems
 
-	unlocks json.RawMessage
+	unlockSummaries map[string]UnlockSummary `json:"-"`
 }
 
-func (r *Reputation) UnmarshalJSON(data []byte) (err error) {
-	if err = json.Unmarshal(data, r); err != nil {
-		return
-	}
-
-	aux := struct {
-		ItemsTotal         int
-		ItemsUnlocked      int
-		EmblemsTotal       int
-		EmblemsUnlocked    int
-		TitlesTotal        *int
-		TitlesUnlocked     *int
-		PromotionsTotal    *int
-		PromotionsUnlocked *int
-	}{}
-	if err = json.Unmarshal(r.unlocks, &aux); err != nil {
-		return
-	}
-	// Items & Emblems are always present
-	r.UnlockSummaries["Items"] = unlockSummary{Total: aux.ItemsTotal, Unlocked: aux.ItemsUnlocked}
-	r.UnlockSummaries["Emblems"] = unlockSummary{Total: aux.EmblemsTotal, Unlocked: aux.EmblemsUnlocked}
-	// Others optional
-	if aux.TitlesTotal != nil {
-		r.UnlockSummaries["Titles"] = unlockSummary{Total: *aux.TitlesTotal, Unlocked: *aux.TitlesUnlocked}
-	}
-	if aux.PromotionsTotal != nil {
-		r.UnlockSummaries["Promotions"] = unlockSummary{Total: *aux.PromotionsTotal, Unlocked: *aux.PromotionsUnlocked}
-	}
-	return
-}
-
-type unlockSummary struct {
+// UnlockSummary provides details about unlocks for a specific type (e.g. "items" or "emblems")
+type UnlockSummary struct {
 	Total    int
 	Unlocked int
+}
+
+// UnlockSummaries maps each unlock type with its data.
+// The returned map is cached in the struct.
+func (r *Reputation) UnlockSummaries() map[string]UnlockSummary {
+	if r.unlockSummaries == nil {
+		s := make(map[string]UnlockSummary)
+		// Items & Emblems are always present
+		s["Items"] = UnlockSummary{Total: r.ItemsTotal, Unlocked: r.ItemsUnlocked}
+		s["Emblems"] = UnlockSummary{Total: r.EmblemsTotal, Unlocked: r.EmblemsUnlocked}
+		// Others optional
+		if r.TitlesTotal != nil {
+			s["Titles"] = UnlockSummary{Total: *r.TitlesTotal, Unlocked: *r.TitlesUnlocked}
+		}
+		if r.PromotionsTotal != nil {
+			s["Promotions"] = UnlockSummary{Total: *r.PromotionsTotal, Unlocked: *r.PromotionsUnlocked}
+		}
+		r.unlockSummaries = s
+	}
+	return r.unlockSummaries
 }
 
 type repEmblems []repEmblem

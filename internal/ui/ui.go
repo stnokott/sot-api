@@ -2,6 +2,7 @@
 package ui
 
 import (
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -10,7 +11,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/stnokott/sot-api/internal/api"
 	"github.com/stnokott/sot-api/internal/backend"
+	"github.com/stnokott/sot-api/internal/files"
 	"go.uber.org/zap"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -24,7 +27,6 @@ var (
 
 // App coordinates API and UI
 type App struct {
-	client    *api.Client
 	scheduler *backend.Scheduler
 
 	profileToolbar *profileToolbar
@@ -40,7 +42,7 @@ type App struct {
 }
 
 // NewApp creates a new root app
-func NewApp(c *api.Client, logger *zap.Logger) *App {
+func NewApp(logger *zap.Logger) *App {
 	a := app.New()
 	w := a.NewWindow(appTitle)
 	w.SetMaster()
@@ -53,7 +55,6 @@ func NewApp(c *api.Client, logger *zap.Logger) *App {
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Reputation", reputationView),
-		container.NewTabItem("Tab 2", widget.NewLabel("World!")),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
@@ -70,9 +71,15 @@ func NewApp(c *api.Client, logger *zap.Logger) *App {
 	w.SetPadded(false)
 	w.Resize(defaultSize)
 
+	token, err := files.ReadToken()
+	if err != nil {
+		errorOverlay.setErr(backend.ErrUnauthorized{Err: err})
+	}
+	client := api.NewClient(token, language.German, logger.With(zap.String("module", "client")))
+	scheduler := backend.NewScheduler(client, refreshInterval, logger.With(zap.String("module", "scheduler")))
+
 	return &App{
-		client:    c,
-		scheduler: backend.NewScheduler(c, refreshInterval, logger.With(zap.String("module", "scheduler"))),
+		scheduler: scheduler,
 
 		profileToolbar: profile,
 		statusBar:      statusBar,
@@ -92,35 +99,58 @@ func (a *App) Run() {
 	a.logger.Info("starting app")
 
 	go a.refreshTask()
-	a.splashWindow.ShowAndRun()
+	a.app.Run()
 }
 
 // refreshTask should be ran as goroutine in the background
 func (a *App) refreshTask() {
 	a.logger.Debug("starting scheduler")
-	chStart, chEnd := a.scheduler.Run()
+	chTaskBegin, chTaskEnd, chReset := a.scheduler.Run()
+	a.errorOverlay.OnBtnAuthenticate = func() {
+		go a.requestNewToken(chReset)
+	}
 
-	splashClosed := false
+	a.splashWindow.Show()
+	time.Sleep(3 * time.Second) // give splash screen some time to show
+	closeSplash := sync.OnceFunc(func() {
+		a.rootWindow.Show()
+		a.splashWindow.Close()
+	})
 
 	var onDone func()
 	for {
 		select {
-		case <-chStart:
+		case <-chTaskBegin:
 			onDone = a.statusBar.DoWork()
-		case result := <-chEnd:
-			if !splashClosed {
-				a.rootWindow.Show()
-				a.splashWindow.Close()
-				splashClosed = true
-			}
-			a.errorOverlay.setErr(result.Err)
+		case result := <-chTaskEnd:
+			closeSplash()
 			if result.Err == nil {
+				a.errorOverlay.Hide()
 				a.profileToolbar.SetProfile(result.Profile)
 				a.reputationView.SetReputation(result.Reputations)
+			} else {
+				a.errorOverlay.setErr(result.Err)
+				a.errorOverlay.Show()
 			}
 			if onDone != nil {
 				onDone()
 			}
 		}
 	}
+}
+
+func (a *App) requestNewToken(chReset chan<- backend.SchedulerReset) {
+	popup := widget.NewModalPopUp(
+		widget.NewLabel("Please login..."),
+		a.rootWindow.Canvas(),
+	)
+	popup.Show()
+
+	resp := <-api.GetAuthFromBrowser()
+	if resp.Err != nil {
+		a.errorOverlay.setErr(resp.Err)
+	} else {
+		chReset <- backend.SchedulerReset{Token: resp.Token}
+	}
+	popup.Hide()
 }
