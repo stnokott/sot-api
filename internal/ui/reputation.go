@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image/color"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -66,11 +67,14 @@ func newReputationView() *reputationView {
 }
 
 func (r *reputationView) SetReputation(data structs.Reputations) {
+	// TODO: dont remove all, but instead only apply data
+	// maybe need to create dedicated struct?
 	r.reputationCategoriesGrid.RemoveAll()
 	for repName, repVal := range data {
 		categoryView, ok := r.reputationCategoryViews[repName]
 		if !ok {
 			categoryView = newReputationCategoryView(repName, repTypeColors[repName])
+			r.reputationCategoryViews[repName] = categoryView
 		}
 		for repSumName, repSumVal := range repVal.UnlockSummaries() {
 			categoryView.AddReputationSummary(reputationProgressSummary{
@@ -79,7 +83,11 @@ func (r *reputationView) SetReputation(data structs.Reputations) {
 				Unlocked: repSumVal.Unlocked,
 			})
 		}
-		// TODO: split in separate function
+		if repVal.Level != nil {
+			categoryView.SetLevel(*repVal.Level, *repVal.Progress)
+		} else {
+			categoryView.HideLevel()
+		}
 		r.reputationCategoriesGrid.Add(categoryView)
 	}
 
@@ -92,9 +100,14 @@ func (r *reputationView) SetReputation(data structs.Reputations) {
 }
 
 type reputationCategoryView struct {
-	lblName     *canvas.Text
-	summaryForm *fyne.Container
-	bgColor     color.Color
+	nameLabel        *canvas.Text
+	summaryContainer *fyne.Container
+
+	levelContainer *fyne.Container
+	levelLabel     *widget.Label
+	levelProgress  *widget.ProgressBar
+
+	bgColor color.Color
 
 	widget.BaseWidget
 }
@@ -102,14 +115,13 @@ type reputationCategoryView struct {
 func (r *reputationCategoryView) CreateRenderer() fyne.WidgetRenderer {
 	r.ExtendBaseWidget(r)
 
-	// TODO: display level
-
 	return widget.NewSimpleRenderer(
 		container.NewMax(
 			canvas.NewHorizontalGradient(r.bgColor, color.Transparent),
 			container.NewVBox(
-				r.lblName,
-				r.summaryForm,
+				r.nameLabel,
+				r.levelContainer,
+				r.summaryContainer,
 			),
 		),
 	)
@@ -126,10 +138,21 @@ func newReputationCategoryView(name string, bg color.Color) *reputationCategoryV
 	lblName.TextStyle = fyne.TextStyle{Bold: true, Italic: true}
 	lblName.TextSize = 28
 
+	levelContainer := container.New(layout.NewFormLayout())
+	levelLabel := widget.NewLabel("Level ?")
+	levelContainer.Add(levelLabel)
+	levelProgress := widget.NewProgressBar()
+	levelProgress.Min, levelProgress.Max = 0, 1
+	levelContainer.Add(levelProgress)
+	levelContainer.Hide()
+
 	return &reputationCategoryView{
-		lblName:     lblName,
-		summaryForm: container.New(layout.NewFormLayout()),
-		bgColor:     bg,
+		nameLabel:        lblName,
+		levelLabel:       levelLabel,
+		levelProgress:    levelProgress,
+		levelContainer:   levelContainer,
+		summaryContainer: container.New(layout.NewFormLayout()),
+		bgColor:          bg,
 	}
 }
 
@@ -140,15 +163,25 @@ type reputationProgressSummary struct {
 }
 
 func (r *reputationCategoryView) ClearReputationSummaries() {
-	r.summaryForm.RemoveAll()
+	r.summaryContainer.RemoveAll()
 }
 
 func (r *reputationCategoryView) AddReputationSummary(s reputationProgressSummary) {
-	r.summaryForm.Add(widget.NewLabel(s.Name))
+	r.summaryContainer.Add(widget.NewLabel(s.Name))
 	progress := widget.NewProgressBar()
 	progress.TextFormatter = newProgressTextFormatter(progress)
 	progress.Min = 0
 	progress.Max = float64(s.Total)
 	progress.Value = float64(s.Unlocked)
-	r.summaryForm.Add(progress)
+	r.summaryContainer.Add(progress)
+}
+
+func (r *reputationCategoryView) SetLevel(level int, progress float64) {
+	r.levelLabel.SetText("Level " + strconv.Itoa(level))
+	r.levelProgress.SetValue(progress)
+	r.levelContainer.Show()
+}
+
+func (r *reputationCategoryView) HideLevel() {
+	r.levelContainer.Hide()
 }
