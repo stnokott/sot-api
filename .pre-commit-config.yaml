@@ -1,10 +1,10 @@
 fail_fast: true
 repos:
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.23.3
+    rev: 0.24.1
     hooks:
       - id: check-github-workflows
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.53.3
+    rev: v1.54.0
     hooks:
       - id: golangci-lint
