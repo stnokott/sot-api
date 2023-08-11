@@ -78,7 +78,7 @@ func NewApp(logger *zap.Logger) *App {
 	if err != nil {
 		errorOverlay.SetErr(backend.ErrUnauthorized{Err: err})
 	}
-	client := api.NewClient(token, language.German, log.ForModule("client"))
+	client := api.NewClient(token, language.English, log.ForModule("client"))
 	scheduler := backend.NewScheduler(client, refreshInterval, log.ForModule("scheduler"))
 
 	return &App{
