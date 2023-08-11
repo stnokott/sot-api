@@ -15,6 +15,7 @@ import (
 type summaryView struct {
 	name              *canvas.Text
 	motto             *canvas.Text
+	rankName          *widget.Label
 	progressContainer *fyne.Container
 
 	widget.BaseWidget
@@ -28,6 +29,7 @@ func (s *summaryView) CreateRenderer() fyne.WidgetRenderer {
 			container.NewVBox(
 				s.name,
 				s.motto,
+				s.rankName,
 				canvas.NewLine(theme.ForegroundColor()),
 				s.progressContainer,
 			),
@@ -44,11 +46,14 @@ func newSummaryView() *summaryView {
 	motto.TextStyle.Italic = true
 	motto.TextSize = theme.CaptionTextSize()
 
+	rankName := widget.NewLabel("n/a")
+
 	progressContainer := container.New(layout.NewFormLayout())
 
 	return &summaryView{
 		name:              name,
 		motto:             motto,
+		rankName:          rankName,
 		progressContainer: progressContainer,
 	}
 }
@@ -58,10 +63,25 @@ func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
 	s.name.Text = name
 	s.motto.Text = "\"" + rep.Motto + "\""
 
-	unlockSummaries := rep.UnlockSummaries()
-	sumItems := make([]fyne.CanvasObject, len(unlockSummaries)*2)
+	s.setRankName(rep.RankName)
+	s.setUnlockSummaries(rep.UnlockSummaries())
+
+	s.Refresh()
+}
+
+func (s *summaryView) setRankName(n *string) {
+	if n != nil {
+		s.rankName.SetText("Rank: " + *n)
+		s.rankName.Show()
+	} else {
+		s.rankName.Hide()
+	}
+}
+
+func (s *summaryView) setUnlockSummaries(data map[string]structs.UnlockSummary) {
+	sumItems := make([]fyne.CanvasObject, len(data)*2)
 	i := 0
-	for sumName, sumVal := range unlockSummaries {
+	for sumName, sumVal := range data {
 		sumItems[i] = widget.NewLabel(sumName)
 		pb := widget.NewProgressBar()
 		pb.Max = float64(sumVal.Total)
@@ -71,8 +91,6 @@ func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
 		i += 2
 	}
 	s.progressContainer.Objects = sumItems
-
-	s.Refresh()
 }
 
 func newSummaryTextFormatter(p *widget.ProgressBar) func() string {
