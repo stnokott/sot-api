@@ -22,7 +22,7 @@ type errorOverlay struct {
 	iconUnknown         fyne.Resource
 	lblErrDetails       *widget.Label
 
-	OnBtnAuthenticate func()
+	btnAuthenticate *widget.Button
 
 	refreshInterval time.Duration
 
@@ -39,6 +39,9 @@ func newErrorOverlay(refreshInterval time.Duration) *errorOverlay {
 	lblErrDetails := widget.NewLabel("n/a")
 	lblErrDetails.Wrapping = fyne.TextWrapWord
 
+	btnAuthenticate := widget.NewButton("Authenticate", nil)
+	btnAuthenticate.Importance = widget.MediumImportance
+
 	return &errorOverlay{
 		apiHealthIcon:       newImageFromResource(iconSuccess, iconSize),
 		apiUnauthorizedIcon: newImageFromResource(iconSuccess, iconSize),
@@ -47,6 +50,7 @@ func newErrorOverlay(refreshInterval time.Duration) *errorOverlay {
 		iconSuccess:         iconSuccess,
 		iconErr:             iconErr,
 		iconUnknown:         iconUnknown,
+		btnAuthenticate:     btnAuthenticate,
 
 		refreshInterval: refreshInterval,
 
@@ -63,9 +67,6 @@ func (o *errorOverlay) CreateRenderer() fyne.WidgetRenderer {
 	lblSubtitle := canvas.NewText("Updates paused, checking again in "+refreshInterval.String(), color.Gray{200})
 	lblSubtitle.TextSize = 12
 
-	btnAuthenticate := widget.NewButton("Authenticate", o.OnBtnAuthenticate)
-	btnAuthenticate.Importance = widget.MediumImportance
-
 	return widget.NewSimpleRenderer(
 		container.NewMax(
 			canvas.NewRectangle(color.NRGBA{R: 50, A: 220}),
@@ -81,18 +82,23 @@ func (o *errorOverlay) CreateRenderer() fyne.WidgetRenderer {
 						canvas.NewRectangle(theme.ErrorColor()),
 						o.lblErrDetails,
 					),
-					btnAuthenticate,
+					o.btnAuthenticate,
 				),
 			),
 		),
 	)
 }
 
-func (o *errorOverlay) setErr(err error) {
+func (o *errorOverlay) SetFnAuthenticate(f func()) {
+	o.btnAuthenticate.OnTapped = f
+}
+
+func (o *errorOverlay) SetErr(err error) {
 	if err == nil {
 		return
 	}
 
+	o.btnAuthenticate.Hide()
 	var resHealth, resAuth, resReq, resResp fyne.Resource
 
 	switch err.(type) {
@@ -106,6 +112,7 @@ func (o *errorOverlay) setErr(err error) {
 		resAuth = o.iconErr
 		resReq = o.iconUnknown
 		resResp = o.iconUnknown
+		o.btnAuthenticate.Show()
 	case backend.ErrAPI:
 		resHealth = o.iconSuccess
 		resAuth = o.iconSuccess

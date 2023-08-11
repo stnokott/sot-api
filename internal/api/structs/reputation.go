@@ -5,7 +5,7 @@ import (
 )
 
 // Reputations contains the reputation for all available campaigns
-type Reputations map[string]Reputation
+type Reputations map[string]*Reputation
 
 // Reputation describes the reputation progress for a specific campaign
 type Reputation struct {

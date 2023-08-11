@@ -13,6 +13,7 @@ import (
 	"github.com/stnokott/sot-api/internal/backend"
 	"github.com/stnokott/sot-api/internal/files"
 	"github.com/stnokott/sot-api/internal/log"
+	"github.com/stnokott/sot-api/internal/ui/reputation"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 )
@@ -32,7 +33,7 @@ type App struct {
 
 	profileToolbar *profileToolbar
 	statusBar      *statusBar
-	reputationView *reputationView
+	reputationView *reputation.View
 	errorOverlay   *errorOverlay
 
 	logger *zap.Logger
@@ -45,12 +46,13 @@ type App struct {
 // NewApp creates a new root app
 func NewApp(logger *zap.Logger) *App {
 	a := app.New()
+	a.Settings().ThemeVariant()
 	w := a.NewWindow(appTitle)
 	w.SetMaster()
 
 	profile := newProfileToolbar()
 	statusBar := newStatusBar()
-	reputationView := newReputationView()
+	reputationView := reputation.NewView()
 	errorOverlay := newErrorOverlay(refreshInterval)
 	errorOverlay.Hide()
 
@@ -74,7 +76,7 @@ func NewApp(logger *zap.Logger) *App {
 
 	token, err := files.ReadToken()
 	if err != nil {
-		errorOverlay.setErr(backend.ErrUnauthorized{Err: err})
+		errorOverlay.SetErr(backend.ErrUnauthorized{Err: err})
 	}
 	client := api.NewClient(token, language.German, log.ForModule("client"))
 	scheduler := backend.NewScheduler(client, refreshInterval, log.ForModule("scheduler"))
@@ -107,9 +109,9 @@ func (a *App) Run() {
 func (a *App) refreshTask() {
 	a.logger.Debug("starting scheduler")
 	chTaskBegin, chTaskEnd, chReset := a.scheduler.Run()
-	a.errorOverlay.OnBtnAuthenticate = func() {
+	a.errorOverlay.SetFnAuthenticate(func() {
 		go a.requestNewToken(chReset)
-	}
+	})
 
 	a.splashWindow.Show()
 	time.Sleep(3 * time.Second) // give splash screen some time to show
@@ -128,9 +130,9 @@ func (a *App) refreshTask() {
 			if result.Err == nil {
 				a.errorOverlay.Hide()
 				a.profileToolbar.SetProfile(result.Profile)
-				a.reputationView.SetReputation(result.Reputations)
+				a.reputationView.SetReputations(result.Reputations)
 			} else {
-				a.errorOverlay.setErr(result.Err)
+				a.errorOverlay.SetErr(result.Err)
 				a.errorOverlay.Show()
 			}
 			if onDone != nil {
@@ -149,7 +151,7 @@ func (a *App) requestNewToken(chReset chan<- backend.SchedulerReset) {
 
 	resp := <-api.GetAuthFromBrowser()
 	if resp.Err != nil {
-		a.errorOverlay.setErr(resp.Err)
+		a.errorOverlay.SetErr(resp.Err)
 	} else {
 		chReset <- backend.SchedulerReset{Token: resp.Token}
 	}

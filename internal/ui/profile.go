@@ -1,63 +1,62 @@
 package ui
 
 import (
-	"errors"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
 	"github.com/stnokott/sot-api/internal/api/structs"
 )
 
 type profileToolbar struct {
-	title        binding.String
-	gold         binding.Int
-	doubloons    binding.Int
-	ancientCoins binding.Int
+	title        *widget.Label
+	gold         *widget.Label
+	doubloons    *widget.Label
+	ancientCoins *widget.Label
 
 	widget.BaseWidget
 }
 
-func (t *profileToolbar) CreateRenderer() fyne.WidgetRenderer {
+func newProfileToolbar() *profileToolbar {
+	title := widget.NewLabel("n/a")
+	title.TextStyle.Bold = true
+	title.TextStyle.Italic = true
+
+	gold := widget.NewLabel("n/a")
+	doubloons := widget.NewLabel("n/a")
+	ancientCoins := widget.NewLabel("n/a")
+
+	t := &profileToolbar{
+		title:        title,
+		gold:         gold,
+		doubloons:    doubloons,
+		ancientCoins: ancientCoins,
+	}
 	t.ExtendBaseWidget(t)
+	return t
+}
 
-	lblTitle := widget.NewLabelWithData(t.title)
-	lblTitle.TextStyle.Bold = true
-	lblTitle.TextStyle.Italic = true
-
+func (t *profileToolbar) CreateRenderer() fyne.WidgetRenderer {
 	iconMinSize := fyne.NewSize(16, 16)
 
 	return widget.NewSimpleRenderer(
 		container.NewHBox(
-			lblTitle,
-			widget.NewLabelWithData(binding.IntToString(t.ancientCoins)),
-			newImageFromResource(resourceAncientCoinsPng, iconMinSize),
-			widget.NewLabelWithData(binding.IntToString(t.doubloons)),
-			newImageFromResource(resourceDoubloonsPng, iconMinSize),
-			widget.NewLabelWithData(binding.IntToString(t.gold)),
+			t.title,
 			newImageFromResource(resourceGoldPng, iconMinSize),
+			t.gold,
+			newImageFromResource(resourceDoubloonsPng, iconMinSize),
+			t.doubloons,
+			newImageFromResource(resourceAncientCoinsPng, iconMinSize),
+			t.ancientCoins,
 		),
 	)
 }
 
 // SetProfile sets all labels and images according to the provided Profile
-func (t *profileToolbar) SetProfile(p *structs.Profile) error {
-	return errors.Join(
-		t.title.Set(p.Title),
-		t.gold.Set(p.Gold),
-		t.ancientCoins.Set(p.AncientCoins),
-		t.doubloons.Set(p.Doubloons),
-	)
-}
-
-func newProfileToolbar() *profileToolbar {
-	t := &profileToolbar{
-		title:        binding.NewString(),
-		gold:         binding.NewInt(),
-		doubloons:    binding.NewInt(),
-		ancientCoins: binding.NewInt(),
-	}
-	_ = t.title.Set("<title unknown>")
-	return t
+func (t *profileToolbar) SetProfile(p *structs.Profile) {
+	t.title.SetText(p.Title)
+	t.gold.SetText(strconv.Itoa(p.Gold))
+	t.ancientCoins.SetText(strconv.Itoa(p.AncientCoins))
+	t.doubloons.SetText(strconv.Itoa(p.Doubloons))
 }
