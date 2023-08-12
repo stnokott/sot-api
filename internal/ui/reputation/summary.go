@@ -21,9 +21,8 @@ type summaryView struct {
 	rankName          *widget.Label
 	progressContainer *fyne.Container
 
-	accordion *widget.Accordion
-	campaigns *widget.AccordionItem
-	emblems   *widget.AccordionItem
+	detailLabel     *canvas.Text
+	detailContainer *fyne.Container
 
 	widget.BaseWidget
 }
@@ -40,7 +39,9 @@ func (s *summaryView) CreateRenderer() fyne.WidgetRenderer {
 					s.rankName,
 					canvas.NewLine(theme.ForegroundColor()),
 					s.progressContainer,
-					s.accordion,
+					canvas.NewLine(theme.ForegroundColor()),
+					s.detailLabel,
+					s.detailContainer,
 				),
 			),
 			s.placeholder,
@@ -66,13 +67,10 @@ func newSummaryView() *summaryView {
 
 	progressContainer := container.New(layout.NewFormLayout())
 
-	campaigns := widget.NewAccordionItem(
-		"Campaigns", container.New(layout.NewFormLayout()),
-	)
-	emblems := widget.NewAccordionItem(
-		"Emblems", container.New(layout.NewFormLayout()),
-	)
-	accordion := widget.NewAccordion()
+	detailLabel := canvas.NewText("n/a", theme.ForegroundColor())
+	detailLabel.TextSize = theme.TextSubHeadingSize()
+	detailLabel.TextStyle.Bold = true
+	detailContainer := container.New(layout.NewFormLayout())
 
 	return &summaryView{
 		placeholder:       placeholder,
@@ -80,9 +78,8 @@ func newSummaryView() *summaryView {
 		motto:             motto,
 		rankName:          rankName,
 		progressContainer: progressContainer,
-		accordion:         accordion,
-		campaigns:         campaigns,
-		emblems:           emblems,
+		detailLabel:       detailLabel,
+		detailContainer:   detailContainer,
 	}
 }
 
@@ -94,14 +91,15 @@ func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
 
 	s.setRankName(rep.RankName)
 	s.setUnlockSummaries(rep.UnlockSummaries())
-	s.setCampaigns(rep.Campaigns)
-	s.setEmblems(rep.Emblems)
-	if len(s.accordion.Items) == 1 {
-		s.accordion.Open(0)
-	} else {
-		s.accordion.CloseAll()
+	switch {
+	case rep.Campaigns != nil:
+		s.setCampaigns(rep.Campaigns)
+	case rep.Emblems != nil:
+		s.setEmblems(rep.Emblems)
+	default:
+		s.detailLabel.Hide()
+		s.detailContainer.Hide()
 	}
-
 	s.Refresh()
 }
 
@@ -135,13 +133,11 @@ func newSummaryTextFormatter(p *widget.ProgressBar) func() string {
 	}
 }
 
+// setCampaigns updates the view with campaign details.
+// Should not be called together with setEmblems as only of the two is possible for the same dataset.
 func (s *summaryView) setCampaigns(campaigns map[string]structs.Campaign) {
-	s.accordion.Remove(s.campaigns)
-	if campaigns == nil {
-		return
-	}
-	container := s.campaigns.Detail.(*fyne.Container)
-	container.RemoveAll()
+	s.detailLabel.Text = "Campaigns"
+	s.detailContainer.RemoveAll()
 	items := make([]fyne.CanvasObject, len(campaigns)*2)
 	i := 0
 	for _, campaign := range campaigns {
@@ -151,28 +147,28 @@ func (s *summaryView) setCampaigns(campaigns map[string]structs.Campaign) {
 		items[i+1] = subtitle
 		i += 2
 	}
-	container.Objects = items
-	container.Refresh()
-	s.accordion.Append(s.campaigns)
+	s.detailContainer.Objects = items
+	s.detailContainer.Refresh()
+
+	s.detailLabel.Show()
+	s.detailContainer.Show()
 }
 
+// setEmblems updates the view with emblem details.
+// Should not be called together with setCampaigns as only of the two is possible for the same dataset.
 func (s *summaryView) setEmblems(emblems structs.Emblems) {
-	s.accordion.Remove(s.emblems)
-	if emblems == nil {
-		return
-	}
-	container := s.emblems.Detail.(*fyne.Container)
-	container.RemoveAll()
+	s.detailLabel.Text = "Emblems"
+	s.detailContainer.RemoveAll()
 	items := make([]fyne.CanvasObject, len(emblems)*2)
-	i := 0
-	for _, emblem := range emblems {
-		items[i] = widget.NewLabel(emblem.Title)
+	for i, emblem := range emblems {
+		items[i*2] = widget.NewLabel(emblem.Title)
 		subtitle := widget.NewLabel(emblem.Subtitle)
 		subtitle.Wrapping = fyne.TextWrapWord
-		items[i+1] = subtitle
-		i += 2
+		items[i*2+1] = subtitle
 	}
-	container.Objects = items
-	container.Refresh()
-	s.accordion.Append(s.emblems)
+	s.detailContainer.Objects = items
+	s.detailContainer.Refresh()
+
+	s.detailLabel.Show()
+	s.detailContainer.Show()
 }
