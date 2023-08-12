@@ -17,6 +17,8 @@ type summaryView struct {
 	motto             *canvas.Text
 	rankName          *widget.Label
 	progressContainer *fyne.Container
+	// placeholder will be visible until a reputation is set
+	placeholder *fyne.Container
 
 	widget.BaseWidget
 }
@@ -33,6 +35,7 @@ func (s *summaryView) CreateRenderer() fyne.WidgetRenderer {
 				canvas.NewLine(theme.ForegroundColor()),
 				s.progressContainer,
 			),
+			s.placeholder,
 		),
 	)
 }
@@ -50,16 +53,25 @@ func newSummaryView() *summaryView {
 
 	progressContainer := container.New(layout.NewFormLayout())
 
+	overlay := container.NewMax(
+		canvas.NewRectangle(theme.BackgroundColor()),
+		container.NewCenter(
+			widget.NewLabel("Select a reputation on the left"),
+		),
+	)
+
 	return &summaryView{
 		name:              name,
 		motto:             motto,
 		rankName:          rankName,
 		progressContainer: progressContainer,
+		placeholder:       overlay,
 	}
 }
 
 // SetReputation updates the view with new data
 func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
+	s.placeholder.Hide()
 	s.name.Text = name
 	s.motto.Text = "\"" + rep.Motto + "\""
 
