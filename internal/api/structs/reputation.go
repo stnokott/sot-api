@@ -24,8 +24,8 @@ type Reputation struct {
 	PromotionsTotal    *int
 	PromotionsUnlocked *int
 
-	Campaigns map[string]repCampaign
-	Emblems   repEmblems
+	Campaigns map[string]Campaign
+	Emblems   Emblems
 
 	unlockSummaries map[string]UnlockSummary `json:"-"`
 }
@@ -56,21 +56,21 @@ func (r *Reputation) UnlockSummaries() map[string]UnlockSummary {
 	return r.unlockSummaries
 }
 
-type repEmblems []repEmblem
+type Emblems []Emblem
 
 // UnmarshalJSON unwraps the inner emblem list to avoid redundant nesting
-func (l *repEmblems) UnmarshalJSON(data []byte) (err error) {
+func (l *Emblems) UnmarshalJSON(data []byte) (err error) {
 	auxInnerData := struct {
-		Emblems []repEmblem
+		Emblems []Emblem
 	}{}
 	if err = json.Unmarshal(data, &auxInnerData); err != nil {
 		return
 	}
-	*l = (repEmblems)(auxInnerData.Emblems)
+	*l = (Emblems)(auxInnerData.Emblems)
 	return
 }
 
-type repEmblem struct {
+type Emblem struct {
 	Title           string
 	Subtitle        string
 	Locked          bool
@@ -80,10 +80,10 @@ type repEmblem struct {
 	ImageURL        string `json:"image"`
 }
 
-type repCampaign struct {
+type Campaign struct {
 	Title           string
-	Description     string `json:"Desc"`
+	Subtitle        string `json:"Desc"`
 	EmblemsTotal    int
 	EmblemsUnlocked int
-	Emblems         []repEmblem
+	Emblems         []Emblem
 }
