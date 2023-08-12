@@ -44,11 +44,14 @@ func (v *View) CreateRenderer() fyne.WidgetRenderer {
 	)
 	reputationList.OnSelected = v.onItemSelected
 
+	split := container.NewHSplit(
+		reputationList,
+		v.summaryView,
+	)
+	split.Offset = 0.3
+
 	return widget.NewSimpleRenderer(
-		container.NewHSplit(
-			reputationList,
-			v.summaryView,
-		),
+		split,
 	)
 }
 
