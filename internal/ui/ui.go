@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	defaultSize     = fyne.NewSize(800, 600)
+	defaultSize     = fyne.NewSize(1200, 800)
 	refreshInterval = 30 * time.Second
 )
 

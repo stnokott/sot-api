@@ -21,8 +21,7 @@ type summaryView struct {
 	rankName          *widget.Label
 	progressContainer *fyne.Container
 
-	detailLabel     *canvas.Text
-	detailContainer *fyne.Container
+	detailContainer *widget.Accordion
 
 	widget.BaseWidget
 }
@@ -40,7 +39,6 @@ func (s *summaryView) CreateRenderer() fyne.WidgetRenderer {
 					canvas.NewLine(theme.ForegroundColor()),
 					s.progressContainer,
 					canvas.NewLine(theme.ForegroundColor()),
-					s.detailLabel,
 					s.detailContainer,
 				),
 			),
@@ -67,10 +65,7 @@ func newSummaryView() *summaryView {
 
 	progressContainer := container.New(layout.NewFormLayout())
 
-	detailLabel := canvas.NewText("n/a", theme.ForegroundColor())
-	detailLabel.TextSize = theme.TextSubHeadingSize()
-	detailLabel.TextStyle.Bold = true
-	detailContainer := container.New(layout.NewFormLayout())
+	detailContainer := widget.NewAccordion()
 
 	return &summaryView{
 		placeholder:       placeholder,
@@ -78,7 +73,6 @@ func newSummaryView() *summaryView {
 		motto:             motto,
 		rankName:          rankName,
 		progressContainer: progressContainer,
-		detailLabel:       detailLabel,
 		detailContainer:   detailContainer,
 	}
 }
@@ -97,7 +91,6 @@ func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
 	case rep.Emblems != nil:
 		s.setEmblems(rep.Emblems)
 	default:
-		s.detailLabel.Hide()
 		s.detailContainer.Hide()
 	}
 	s.Refresh()
@@ -133,42 +126,47 @@ func newSummaryTextFormatter(p *widget.ProgressBar) func() string {
 	}
 }
 
+func (s *summaryView) setEmblemMap(emblemMap map[string][]structs.Emblem) {
+	items := make([]*widget.AccordionItem, len(emblemMap))
+	i := 0
+	for name, emblems := range emblemMap {
+		cont := container.New(layout.NewFormLayout())
+		contItems := make([]fyne.CanvasObject, 2*len(emblems))
+		for j, emblem := range emblems {
+			contItems[j*2] = widget.NewLabel(emblem.Title)
+			subtitle := widget.NewLabel(emblem.Subtitle)
+			subtitle.Wrapping = fyne.TextWrapWord
+			contItems[j*2+1] = subtitle
+		}
+		cont.Objects = contItems
+		// TODO: needed?
+		// cont.Refresh()
+		items[i] = widget.NewAccordionItem(name, cont)
+		i++
+	}
+	s.detailContainer.Items = items
+	if len(s.detailContainer.Items) == 1 {
+		s.detailContainer.Open(0)
+	}
+	s.detailContainer.Show()
+	s.detailContainer.Refresh()
+}
+
 // setCampaigns updates the view with campaign details.
 // Should not be called together with setEmblems as only of the two is possible for the same dataset.
 func (s *summaryView) setCampaigns(campaigns map[string]structs.Campaign) {
-	s.detailLabel.Text = "Campaigns"
-	s.detailContainer.RemoveAll()
-	items := make([]fyne.CanvasObject, len(campaigns)*2)
-	i := 0
+	emblemMap := make(map[string][]structs.Emblem, len(campaigns))
 	for _, campaign := range campaigns {
-		items[i] = widget.NewLabel(campaign.Title)
-		subtitle := widget.NewLabel(campaign.Subtitle)
-		subtitle.Wrapping = fyne.TextWrapWord
-		items[i+1] = subtitle
-		i += 2
+		emblemMap[campaign.Title] = campaign.Emblems
 	}
-	s.detailContainer.Objects = items
-	s.detailContainer.Refresh()
-
-	s.detailLabel.Show()
-	s.detailContainer.Show()
+	s.setEmblemMap(emblemMap)
 }
 
 // setEmblems updates the view with emblem details.
 // Should not be called together with setCampaigns as only of the two is possible for the same dataset.
 func (s *summaryView) setEmblems(emblems structs.Emblems) {
-	s.detailLabel.Text = "Emblems"
-	s.detailContainer.RemoveAll()
-	items := make([]fyne.CanvasObject, len(emblems)*2)
-	for i, emblem := range emblems {
-		items[i*2] = widget.NewLabel(emblem.Title)
-		subtitle := widget.NewLabel(emblem.Subtitle)
-		subtitle.Wrapping = fyne.TextWrapWord
-		items[i*2+1] = subtitle
+	emblemMap := map[string][]structs.Emblem{
+		"Emblems": emblems,
 	}
-	s.detailContainer.Objects = items
-	s.detailContainer.Refresh()
-
-	s.detailLabel.Show()
-	s.detailContainer.Show()
+	s.setEmblemMap(emblemMap)
 }
