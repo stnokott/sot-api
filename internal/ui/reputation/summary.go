@@ -106,15 +106,18 @@ func (s *summaryView) setRankName(n *string) {
 }
 
 func (s *summaryView) setUnlockSummaries(data map[string]structs.UnlockSummary) {
-	sumItems := make([]fyne.CanvasObject, len(data)*2)
+	var sumItems []fyne.CanvasObject
 	i := 0
 	for sumName, sumVal := range data {
-		sumItems[i] = widget.NewLabel(sumName)
+		if sumVal.Total == 0 {
+			continue
+		}
+		sumItems = append(sumItems, widget.NewLabel(sumName))
 		pb := widget.NewProgressBar()
 		pb.Max = float64(sumVal.Total)
 		pb.Value = float64(sumVal.Unlocked)
 		pb.TextFormatter = newSummaryTextFormatter(pb)
-		sumItems[i+1] = pb
+		sumItems = append(sumItems, pb)
 		i += 2
 	}
 	s.progressContainer.Objects = sumItems
