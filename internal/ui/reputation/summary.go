@@ -18,7 +18,7 @@ type summaryView struct {
 
 	name              *canvas.Text
 	motto             *canvas.Text
-	rankName          *widget.Label
+	rankName          *canvas.Text
 	progressContainer *fyne.Container
 
 	detailContainer *widget.Accordion
@@ -33,9 +33,14 @@ func (s *summaryView) CreateRenderer() fyne.WidgetRenderer {
 		container.NewPadded(
 			container.NewVScroll(
 				container.NewVBox(
-					s.name,
-					s.motto,
-					s.rankName,
+					container.NewHBox(
+						container.NewVBox(
+							s.name,
+							s.motto,
+						),
+						layout.NewSpacer(),
+						container.NewPadded(s.rankName),
+					),
 					canvas.NewLine(theme.ForegroundColor()),
 					s.progressContainer,
 					canvas.NewLine(theme.ForegroundColor()),
@@ -61,7 +66,8 @@ func newSummaryView() *summaryView {
 	motto := canvas.NewText("n/a", theme.ForegroundColor())
 	motto.TextStyle.Italic = true
 	motto.TextSize = theme.CaptionTextSize()
-	rankName := widget.NewLabel("n/a")
+	rankName := canvas.NewText("n/a", theme.ForegroundColor())
+	rankName.TextSize = theme.TextSubHeadingSize()
 
 	progressContainer := container.New(layout.NewFormLayout())
 
@@ -98,7 +104,7 @@ func (s *summaryView) SetReputation(name string, rep *structs.Reputation) {
 
 func (s *summaryView) setRankName(n *string) {
 	if n != nil {
-		s.rankName.SetText("Rank: " + *n)
+		s.rankName.Text = "Rank: " + *n
 		s.rankName.Show()
 	} else {
 		s.rankName.Hide()
