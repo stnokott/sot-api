@@ -33,7 +33,7 @@ type App struct {
 
 	profileToolbar *profileToolbar
 	statusBar      *statusBar
-	reputationView *reputation.View
+	reputationView *reputation.Tree
 	errorOverlay   *errorOverlay
 
 	logger *zap.Logger
@@ -52,7 +52,7 @@ func NewApp(logger *zap.Logger) *App {
 
 	profile := newProfileToolbar()
 	statusBar := newStatusBar()
-	reputationView := reputation.NewView()
+	reputationView := reputation.NewTree()
 	errorOverlay := newErrorOverlay(refreshInterval)
 	errorOverlay.Hide()
 

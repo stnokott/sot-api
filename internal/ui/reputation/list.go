@@ -2,92 +2,68 @@
 package reputation
 
 import (
-	"slices"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
 	"github.com/stnokott/sot-api/internal/api/structs"
 )
 
-// View is a list of reputations together with a detailed view of the selected reputation
-type View struct {
-	reputationNames        []string
-	reputationNamesBinding binding.ExternalStringList
-	reputationItems        structs.Reputations
+// Tree displays reputation categories and their emblem unlock progress
+type Tree struct {
+	rootNode *node
 
-	summaryView *summaryView
+	tree *widget.Tree
 
 	widget.BaseWidget
 }
 
-// NewView creates a new ReputationView instance
-func NewView() *View {
-	r := &View{
-		summaryView: newSummaryView(),
+// NewTree initializes the view's tree and bindings
+func NewTree() *Tree {
+	t := &Tree{
+		rootNode: &node{Label: "Root node placeholder"},
 	}
-	r.reputationNamesBinding = binding.BindStringList(&r.reputationNames)
-	return r
+	t.ExtendBaseWidget(t)
+	t.createTree()
+	return t
+}
+
+func (t *Tree) createTree() {
+	t.tree = widget.NewTree(
+		t.getChildTreeNodes,
+		t.isBranch,
+		func(branch bool) fyne.CanvasObject {
+			if branch {
+				return widget.NewLabel("Branch template")
+			}
+			w := widget.NewLabel("Leaf template")
+			w.Wrapping = fyne.TextWrapWord
+			return w
+		},
+		func(id widget.TreeNodeID, _ bool, o fyne.CanvasObject) {
+			node := t.rootNode.findNode(id)
+			o.(*widget.Label).SetText(node.Label)
+		},
+	)
+}
+
+func (t *Tree) isBranch(id widget.TreeNodeID) bool {
+	return !t.rootNode.findNode(id).isLeaf()
+}
+
+func (t *Tree) getChildTreeNodes(id widget.TreeNodeID) []widget.TreeNodeID {
+	result := t.rootNode.childIDsOf(id)
+	return result
 }
 
 // CreateRenderer implements the fyne.Widget interface
-func (v *View) CreateRenderer() fyne.WidgetRenderer {
-	v.ExtendBaseWidget(v)
-
-	reputationList := widget.NewListWithData(
-		v.reputationNamesBinding,
-		func() fyne.CanvasObject {
-			return newColoredListItem()
-		},
-		v.updateReputationItem,
-	)
-	reputationList.OnSelected = v.onItemSelected
-
-	split := container.NewHSplit(
-		reputationList,
-		v.summaryView,
-	)
-	split.Offset = 0.3
-
+func (t *Tree) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(
-		split,
+		t.tree,
 	)
-}
-
-func (v *View) updateReputationItem(di binding.DataItem, co fyne.CanvasObject) {
-	name, err := di.(binding.String).Get()
-	if err != nil {
-		// TODO: display error
-		panic(err)
-	}
-	displayName := repTypeDisplaynames[name]
-	color := repTypeColors[name]
-	co.(*coloredListItem).SetReputation(displayName, color, v.reputationItems[name])
 }
 
 // SetReputations can be used to update the reputations
-func (v *View) SetReputations(data structs.Reputations) {
-	// get reputation names
-	names := make([]string, len(data))
-	i := 0
-	for repName := range data {
-		names[i] = repName
-		i++
-	}
-	slices.Sort(names) // sort names
-
-	v.reputationNames = names
-	if err := v.reputationNamesBinding.Reload(); err != nil {
-		// should not happen
-		panic(err)
-	}
-	// TODO: update summary for currently selected item
-	v.reputationItems = data
-}
-
-func (v *View) onItemSelected(i int) {
-	itemName := v.reputationNames[i]
-	displayName := repTypeDisplaynames[itemName]
-	v.summaryView.SetReputation(displayName, v.reputationItems[itemName])
+// FIXME: displayed order changes on every update
+func (t *Tree) SetReputations(data structs.Reputations) {
+	t.rootNode = newRootNode(nodeImplReputations(data))
+	t.tree.Refresh()
 }
