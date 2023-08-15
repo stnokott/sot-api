@@ -4,7 +4,20 @@ repos:
     rev: 0.24.1
     hooks:
       - id: check-github-workflows
+  - repo: local
+    hooks:
+      - args:
+          - test
+          - ./...
+        types: [text]
+        files: "\\.go$"
+        entry: go
+        fail_fast: true
+        id: go-test-race
+        language: golang
+        name: go-test-race
+        pass_filenames: false
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.54.0
+    rev: v1.54.1
     hooks:
       - id: golangci-lint
