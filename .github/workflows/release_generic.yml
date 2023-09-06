@@ -21,7 +21,7 @@ jobs:
           go-version-file: "go.mod"
           cache: false # don't use cache because it's huge (>1GB)
       - if: inputs.snapshot == false
-        uses: goreleaser/goreleaser-action@v4.3.0
+        uses: goreleaser/goreleaser-action@v4.6.0
         with:
           distribution: goreleaser
           version: latest
@@ -29,7 +29,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: inputs.snapshot == true
-        uses: goreleaser/goreleaser-action@v4.3.0
+        uses: goreleaser/goreleaser-action@v4.6.0
         with:
           distribution: goreleaser
           version: latest
